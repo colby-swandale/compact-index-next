@@ -10,7 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_20_004823) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_20_010100) do
+  create_table "build_artifacts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "platform", null: false
+    t.string "ruby_abi", null: false
+    t.string "sha256", limit: 64, null: false
+    t.integer "size"
+    t.string "source_url"
+    t.datetime "updated_at", null: false
+    t.integer "version_id", null: false
+    t.index ["sha256"], name: "index_build_artifacts_on_sha256", unique: true
+    t.index ["version_id", "platform", "ruby_abi"], name: "index_build_artifacts_on_version_platform_abi", unique: true
+    t.index ["version_id"], name: "index_build_artifacts_on_version_id"
+  end
+
   create_table "dependencies", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "requirements"
@@ -22,6 +36,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_004823) do
     t.index ["rubygem_id"], name: "index_dependencies_on_rubygem_id"
     t.index ["unresolved_name"], name: "index_dependencies_on_unresolved_name"
     t.index ["version_id"], name: "index_dependencies_on_version_id"
+  end
+
+  create_table "index_cursors", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "last_processed_at"
+    t.boolean "paused", default: false, null: false
+    t.string "schema_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["schema_name"], name: "index_index_cursors_on_schema_name", unique: true
   end
 
   create_table "rubygems", force: :cascade do |t|
@@ -74,6 +97,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_20_004823) do
     t.index ["rubygem_id"], name: "index_versions_on_rubygem_id"
   end
 
+  add_foreign_key "build_artifacts", "versions"
   add_foreign_key "dependencies", "rubygems"
   add_foreign_key "dependencies", "versions"
   add_foreign_key "versions", "rubygems"

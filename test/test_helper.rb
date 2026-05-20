@@ -10,6 +10,16 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
-    # Add more helper methods to be used by all tests here...
+    # Each test gets an isolated compact-index storage root so artifacts
+    # written by one test never leak into another.
+    setup do
+      @compact_index_storage_root = Dir.mktmpdir("compact_index_test")
+      CompactIndex.storage_root = @compact_index_storage_root
+    end
+
+    teardown do
+      FileUtils.remove_entry(@compact_index_storage_root) if @compact_index_storage_root && File.exist?(@compact_index_storage_root)
+      CompactIndex.storage_root = nil
+    end
   end
 end

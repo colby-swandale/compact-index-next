@@ -137,4 +137,27 @@ RAILS_VERSIONS.each do |number|
   add_dependency!(railties_v,     external.fetch("globalid"), ">= 0.3.6")
 end
 
-puts "Seeded #{Rubygem.count} gems, #{Version.count} versions, #{Dependency.count} dependencies"
+# 4. Build artifacts — fabricated pre-compiled native gem manifests for v3.
+# Only attached to nokogiri (the canonical native-extension gem in this seed).
+NATIVE_PLATFORMS = [
+  [ "x86_64-linux-gnu",   "ruby32" ],
+  [ "x86_64-linux-gnu",   "ruby33" ],
+  [ "aarch64-linux-gnu",  "ruby33" ],
+  [ "x86_64-darwin",      "ruby33" ],
+  [ "arm64-darwin",       "ruby33" ]
+].freeze
+
+nokogiri_v = external.fetch("nokogiri").versions.find_by!(number: "1.16.7", platform: "ruby")
+NATIVE_PLATFORMS.each do |platform, ruby_abi|
+  sha = Digest::SHA256.hexdigest("nokogiri-1.16.7-#{platform}-#{ruby_abi}")
+  BuildArtifact.find_or_create_by!(sha256: sha) do |a|
+    a.version = nokogiri_v
+    a.platform = platform
+    a.ruby_abi = ruby_abi
+    a.size = 8_000_000 + rand(2_000_000)
+    a.source_url = "https://gems.example/nokogiri-1.16.7-#{platform}-#{ruby_abi}.gem"
+  end
+end
+
+puts "Seeded #{Rubygem.count} gems, #{Version.count} versions, " \
+     "#{Dependency.count} dependencies, #{BuildArtifact.count} build artifacts"

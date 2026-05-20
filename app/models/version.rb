@@ -1,6 +1,9 @@
 class Version < ApplicationRecord
+  include EmitsIndexChange
+
   belongs_to :rubygem
   has_many :dependencies, dependent: :destroy
+  has_many :build_artifacts, dependent: :destroy
 
   validates :number, presence: true
   validates :platform, presence: true

@@ -1,0 +1,15 @@
+rake_linux_ruby33:
+  version: rake_13_2_1
+  platform: x86_64-linux-gnu
+  ruby_abi: ruby33
+  sha256: <%= "a" * 64 %>
+  size: 1500000
+  source_url: https://gems.example/rake-13.2.1-x86_64-linux-gnu-ruby33.gem
+
+rake_darwin_ruby33:
+  version: rake_13_2_1
+  platform: arm64-darwin
+  ruby_abi: ruby33
+  sha256: <%= "b" * 64 %>
+  size: 1400000
+  source_url: https://gems.example/rake-13.2.1-arm64-darwin-ruby33.gem
