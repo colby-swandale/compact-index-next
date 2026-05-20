@@ -114,9 +114,15 @@ module CompactIndex
       def self.info_requirements(version)
         reqs = {}
         reqs[:checksum] = version.sha256 if version.sha256.present?
-        reqs[:ruby] = format_constraints(version.required_ruby_version) if version.required_ruby_version.present?
-        reqs[:rubygems] = format_constraints(version.required_rubygems_version) if version.required_rubygems_version.present?
+        reqs[:ruby] = format_constraints(version.required_ruby_version) if meaningful_requirement?(version.required_ruby_version)
+        reqs[:rubygems] = format_constraints(version.required_rubygems_version) if meaningful_requirement?(version.required_rubygems_version)
         reqs
+      end
+
+      # rubygems.org omits ruby:/rubygems: when the constraint is the default
+      # (">= 0") — an unconstrained requirement carries no information.
+      def self.meaningful_requirement?(req)
+        req.present? && format_constraints(req) != ">= 0"
       end
 
       def self.dep_pairs(version)
