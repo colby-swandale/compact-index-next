@@ -4,3 +4,11 @@ rake_runtime_bundler:
   unresolved_name: bundler
   requirements: ">= 1.17"
   scope: runtime
+
+# Multi-constraint requirement — must render with '&', not ', '
+bundler_runtime_multi:
+  version: bundler_2_5_0
+  rubygem: rake
+  unresolved_name: rake
+  requirements: ">= 2.4.0, < 3.0"
+  scope: runtime

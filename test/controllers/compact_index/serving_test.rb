@@ -115,5 +115,28 @@ module CompactIndex
       assert_response :range_not_satisfiable
       assert_equal "bytes */#{size}", response.headers["Content-Range"]
     end
+
+    test "Repr-Digest carries the SHA256 of the full body (RFC 9530 format)" do
+      get "/v1/versions"
+      expected = Base64.strict_encode64(Digest::SHA256.digest(response.body))
+      assert_equal "sha-256=:#{expected}:", response.headers["Repr-Digest"]
+    end
+
+    test "Repr-Digest on a 206 still reflects the FULL representation" do
+      get "/v1/versions"
+      full_digest = response.headers["Repr-Digest"]
+
+      get "/v1/versions", headers: { "Range" => "bytes=0-9" }
+      assert_response :partial_content
+      assert_equal full_digest, response.headers["Repr-Digest"],
+        "client assembling Range responses verifies against the full-file digest"
+    end
+
+    test "Cache-Control is max-age=60, public" do
+      get "/v1/versions"
+      cc = response.headers["Cache-Control"]
+      assert_includes cc, "max-age=60"
+      assert_includes cc, "public"
+    end
   end
 end

@@ -39,16 +39,19 @@ module CompactIndex
     # re-validating cached files via ETag/If-Modified-Since — so both are
     # first-class here, not afterthoughts.
     def serve_payload(payload)
+      body = payload[:body]
+      content_type = payload[:content_type]
+
       response.headers["Accept-Ranges"] = "bytes"
+      # Repr-Digest carries the SHA256 of the FULL representation (RFC 9530),
+      # so a client assembling a file from Range responses can verify the
+      # result. Computed on the full body even for 206/304 responses.
+      response.headers["Repr-Digest"] = "sha-256=:#{Base64.strict_encode64(Digest::SHA256.digest(body))}:"
+      expires_in 60.seconds, public: true
 
       # 304 short-circuit. stale? returns false (and sets a 304 response)
       # when the client's cached copy is still fresh.
-      return unless stale?(etag: payload[:etag],
-                           last_modified: payload[:last_modified],
-                           public: true)
-
-      body = payload[:body]
-      content_type = payload[:content_type]
+      return unless stale?(etag: payload[:etag], last_modified: payload[:last_modified])
 
       range = request.headers["Range"]
       ranges = Rack::Utils.get_byte_ranges(range, body.bytesize) if range.present?
