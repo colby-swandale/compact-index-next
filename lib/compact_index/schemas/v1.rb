@@ -6,16 +6,19 @@ module CompactIndex
     # today's wire format from the canonical DB byte-for-byte against
     # seeded data.
     #
-    # Three resource instances:
-    #   versions  - AppendOnlyLog : /v1/versions
-    #   names     - SingleFile    : /v1/names
+    # Three resource instances. Declaration order matters: `info` is
+    # declared before `versions` so the indexer materializes each gem's
+    # /info file *before* the /versions line that stamps that file's
+    # checksum (see versions_record).
     #   info      - Keyed         : /v1/info/<gem>
+    #   names     - SingleFile    : /v1/names
+    #   versions  - AppendOnlyLog : /v1/versions
     class V1 < Schema
-      name "v1"
+      schema_id "v1"
 
-      resource :versions, type: Resources::AppendOnlyLog
-      resource :names,    type: Resources::SingleFile
       resource :info,     type: Resources::Keyed
+      resource :names,    type: Resources::SingleFile
+      resource :versions, type: Resources::AppendOnlyLog
 
       # ---------- shared helpers ----------
 
@@ -23,8 +26,14 @@ module CompactIndex
         Rubygem.where(indexed: true).order(:name)
       end
 
+      # Versions that are installable: indexed and not yanked. This is what
+      # /info lists and what the un-prefixed entries in /versions reflect.
       def self.indexed_versions_for(rubygem)
-        rubygem.versions.where(indexed: true).order(:created_at, :id)
+        rubygem.versions.where(indexed: true, yanked_at: nil).order(:created_at, :id)
+      end
+
+      def self.yanked_versions_for(rubygem)
+        rubygem.versions.where.not(yanked_at: nil).order(:created_at, :id)
       end
 
       # ---------- AppendOnlyLog: /versions ----------
@@ -33,36 +42,39 @@ module CompactIndex
         "created_at: #{Time.current.utc.iso8601}\n---\n"
       end
 
-      def self.append_only_log_records_for(_name, change)
+      def self.append_only_log_records_for(_name, change, storage)
         rubygem = rubygem_for_change(change)
         return [] unless rubygem
         return [] unless rubygem.indexed?
 
-        [ versions_record(rubygem) ].compact
+        [ versions_record(rubygem, storage) ].compact
       end
 
-      def self.append_only_log_full_history(_name)
-        indexed_gems.flat_map do |gem|
-          rec = versions_record(gem)
-          rec ? [ rec ] : []
-        end
+      def self.append_only_log_full_history(_name, storage)
+        indexed_gems.filter_map { |gem| versions_record(gem, storage) }
       end
 
-      def self.versions_record(rubygem)
-        versions = indexed_versions_for(rubygem)
-        return nil if versions.empty?
+      # [gem_name, "v1,v2,-yanked", info_checksum]. The checksum is read from
+      # the materialized /info file (not recomputed from the DB) so a
+      # /versions line always points at the bytes actually being served.
+      def self.versions_record(rubygem, storage)
+        labels = listed_version_labels(rubygem)
+        return nil if labels.empty?
 
-        version_list = versions.map { |v| version_label(v) }.join(",")
-        info_md5 = info_checksum(rubygem)
-        [ rubygem.name, version_list, info_md5 ]
+        info_md5 = resource_for(:info).content_checksum_for(storage, rubygem.name)
+        [ rubygem.name, labels.join(","), info_md5 ]
+      end
+
+      # Live versions as plain labels, followed by yanked versions prefixed
+      # with "-" (the compact-index removal marker).
+      def self.listed_version_labels(rubygem)
+        live = indexed_versions_for(rubygem).map { |v| version_label(v) }
+        yanked = yanked_versions_for(rubygem).map { |v| "-#{version_label(v)}" }
+        live + yanked
       end
 
       def self.version_label(v)
         v.platform == "ruby" ? v.number : "#{v.number}-#{v.platform}"
-      end
-
-      def self.info_checksum(rubygem)
-        Digest::MD5.hexdigest(info_body(rubygem))
       end
 
       # ---------- SingleFile: /names ----------

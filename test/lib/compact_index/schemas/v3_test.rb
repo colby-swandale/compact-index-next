@@ -4,7 +4,8 @@ module CompactIndex
   module Schemas
     class V3Test < ActiveSupport::TestCase
       test "declares a CAS resource on top of v2's three resources" do
-        assert_equal %w[versions names info cas], V3.resources.keys
+        assert_equal %w[info names versions cas].sort, V3.resources.keys.sort
+        assert_equal "cas", V3.resources.keys.last, "cas is appended after inherited resources"
       end
 
       test "content_addressed_all_for returns every artifact sha" do

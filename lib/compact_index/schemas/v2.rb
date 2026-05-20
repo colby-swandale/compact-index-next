@@ -7,7 +7,7 @@ module CompactIndex
     # This is the additive-field path the architecture is designed to make
     # cheap: schema delta only, engine untouched.
     class V2 < V1
-      name "v2"
+      schema_id "v2"
 
       def self.info_requirements(version)
         reqs = super

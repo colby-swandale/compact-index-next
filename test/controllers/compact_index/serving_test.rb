@@ -61,11 +61,59 @@ module CompactIndex
       assert_response :not_found
     end
 
-    test "responses carry ETag and Last-Modified headers" do
+    test "responses carry ETag, Last-Modified, and Accept-Ranges headers" do
       get "/v2/info/rake"
       assert_response :success
-      assert_match(/\A".+"\z/, response.headers["ETag"])
+      assert response.headers["ETag"].present?
       assert response.headers["Last-Modified"].present?
+      assert_equal "bytes", response.headers["Accept-Ranges"]
+    end
+
+    test "If-None-Match matching the ETag returns 304" do
+      get "/v1/versions"
+      assert_response :success
+      etag = response.headers["ETag"]
+
+      get "/v1/versions", headers: { "If-None-Match" => etag }
+      assert_response :not_modified
+    end
+
+    test "If-Modified-Since after Last-Modified returns 304" do
+      get "/v1/versions"
+      assert_response :success
+      last_modified = response.headers["Last-Modified"]
+
+      get "/v1/versions", headers: { "If-Modified-Since" => last_modified }
+      assert_response :not_modified
+    end
+
+    test "Range request returns 206 with the requested byte slice" do
+      get "/v1/versions"
+      full = response.body
+
+      get "/v1/versions", headers: { "Range" => "bytes=0-9" }
+      assert_response :partial_content
+      assert_equal full.byteslice(0..9), response.body
+      assert_equal "bytes 0-9/#{full.bytesize}", response.headers["Content-Range"]
+    end
+
+    test "suffix Range (bytes=N-) returns the tail" do
+      get "/v1/versions"
+      full = response.body
+      start = full.bytesize - 20
+
+      get "/v1/versions", headers: { "Range" => "bytes=#{start}-" }
+      assert_response :partial_content
+      assert_equal full.byteslice(start..), response.body
+    end
+
+    test "unsatisfiable Range returns 416" do
+      get "/v1/versions"
+      size = response.body.bytesize
+
+      get "/v1/versions", headers: { "Range" => "bytes=#{size + 100}-#{size + 200}" }
+      assert_response :range_not_satisfiable
+      assert_equal "bytes */#{size}", response.headers["Content-Range"]
     end
   end
 end

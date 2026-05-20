@@ -25,15 +25,46 @@ module CompactIndex
         return
       end
 
-      payload = resource.serve(::CompactIndex::Storage.new(schema.name), key: key)
+      payload = resource.serve(::CompactIndex::Storage.new(schema.schema_id), key: key)
       if payload.nil?
         head :not_found
         return
       end
 
-      response.set_header("ETag", %Q("#{payload[:etag]}"))
-      response.set_header("Last-Modified", payload[:last_modified].httpdate)
-      send_data payload[:body], type: payload[:content_type], disposition: "inline"
+      serve_payload(payload)
+    end
+
+    # Conditional GET + Range. The compact-index format is built around
+    # clients fetching only the appended suffix of /versions via Range, and
+    # re-validating cached files via ETag/If-Modified-Since — so both are
+    # first-class here, not afterthoughts.
+    def serve_payload(payload)
+      response.headers["Accept-Ranges"] = "bytes"
+
+      # 304 short-circuit. stale? returns false (and sets a 304 response)
+      # when the client's cached copy is still fresh.
+      return unless stale?(etag: payload[:etag],
+                           last_modified: payload[:last_modified],
+                           public: true)
+
+      body = payload[:body]
+      content_type = payload[:content_type]
+
+      range = request.headers["Range"]
+      ranges = Rack::Utils.get_byte_ranges(range, body.bytesize) if range.present?
+
+      if ranges && ranges.empty?
+        response.headers["Content-Range"] = "bytes */#{body.bytesize}"
+        head :range_not_satisfiable
+      elsif ranges && ranges.size == 1
+        slice = ranges.first
+        response.status = :partial_content
+        response.headers["Content-Range"] = "bytes #{slice.begin}-#{slice.end}/#{body.bytesize}"
+        send_data body.byteslice(slice), type: content_type, disposition: "inline"
+      else
+        # No range, or multi-range (unsupported) -> serve full body.
+        send_data body, type: content_type, disposition: "inline"
+      end
     end
   end
 end

@@ -10,7 +10,7 @@ module CompactIndex
     # themselves, which would live in object storage keyed by the same
     # sha256.
     class V3 < V2
-      name "v3"
+      schema_id "v3"
 
       resource :cas, type: Resources::ContentAddressed
 

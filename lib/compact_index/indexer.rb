@@ -7,8 +7,8 @@ module CompactIndex
 
     def initialize(schema)
       @schema = schema
-      @storage = Storage.new(schema.name)
-      @cursor = IndexCursor.for(schema.name)
+      @storage = Storage.new(schema.schema_id)
+      @cursor = IndexCursor.for(schema.schema_id)
     end
 
     # Apply one change (a single record-touched event) across every resource

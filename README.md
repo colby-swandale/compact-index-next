@@ -159,6 +159,9 @@ app/controllers/admin/indexers_controller.rb
 bin/rails test
 ```
 
-40 tests, exercising engine wire syntax, each schema's projection,
-indexer rebuild/advance/pause semantics, HTTP serving for every endpoint
-across every schema, and the admin observability surface.
+51 tests, exercising engine wire syntax, each schema's projection
+(including yank handling and the /versions↔/info checksum linkage),
+indexer rebuild/advance/pause/idempotent-retry semantics, the real
+after_commit→job→advance path, HTTP serving for every endpoint across
+every schema (including Range requests and conditional 304s), and the
+admin observability surface.

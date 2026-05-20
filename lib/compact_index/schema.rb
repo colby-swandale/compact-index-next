@@ -20,11 +20,14 @@ module CompactIndex
         subclass.instance_variable_set(:@resources, resources.dup)
       end
 
-      def name(value = nil)
+      # The version identifier (e.g. "v1"). Deliberately NOT named `name`:
+      # overriding Module#name breaks Zeitwerk/eager-load tooling that calls
+      # klass.name on every constant.
+      def schema_id(value = nil)
         if value
-          @name = value
+          @schema_id = value
         else
-          @name
+          @schema_id
         end
       end
 
@@ -59,13 +62,15 @@ module CompactIndex
     end
 
     # Records to append for an incremental change. `change` is a hash like
-    # { record_type: "Version", record_id: 123 }.
-    def self.append_only_log_records_for(_resource_name, _change)
+    # { record_type: "Version", record_id: 123 }. `storage` is passed so the
+    # record can read the just-materialized companion files (e.g. the /info
+    # file whose checksum is stamped into the /versions line).
+    def self.append_only_log_records_for(_resource_name, _change, _storage)
       []
     end
 
     # Full ordered history of records — used during rebuild.
-    def self.append_only_log_full_history(_resource_name)
+    def self.append_only_log_full_history(_resource_name, _storage)
       []
     end
 
