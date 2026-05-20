@@ -1,0 +1,7 @@
+rake:
+  name: rake
+  indexed: true
+
+bundler:
+  name: bundler
+  indexed: true

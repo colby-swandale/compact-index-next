@@ -1,0 +1,15 @@
+rake_13_2_1:
+  rubygem: rake
+  number: "13.2.1"
+  platform: ruby
+  full_name: "rake-13.2.1"
+  indexed: true
+  prerelease: false
+
+bundler_2_5_0:
+  rubygem: bundler
+  number: "2.5.0"
+  platform: ruby
+  full_name: "bundler-2.5.0"
+  indexed: true
+  prerelease: false

@@ -1,0 +1,6 @@
+rake_runtime_bundler:
+  version: rake_13_2_1
+  rubygem: bundler
+  unresolved_name: bundler
+  requirements: ">= 1.17"
+  scope: runtime
